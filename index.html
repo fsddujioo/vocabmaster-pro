@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>VocabMaster Pro - Học Tiếng Anh Flashcard &amp; SRS</title>
+  <meta name="description" content="Ứng dụng học từ vựng tiếng Anh qua flashcard thông minh, phương pháp lặp lại ngắt quãng SRS, phát âm UK/US và trò chơi ghép thẻ hoạt động hoàn hảo Offline và Online.">
+  <meta name="theme-color" content="#3b82f6">
+
+  <!-- PWA Manifest & Icons -->
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/svg+xml" href="icons/icon-192.svg">
+  <link rel="apple-touch-icon" href="icons/icon-192.svg">
+
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="css/styles.css?v=4.0">
+
+  <!-- BỘ DỌN DẸP CACHE TỰ ĐỘNG: Hủy Service Worker cũ & Xóa toàn bộ bộ nhớ đệm cũ -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(function(registrations) {
+        for (var i = 0; i < registrations.length; i++) {
+          registrations[i].unregister();
+        }
+      });
+    }
+    if ('caches' in window) {
+      caches.keys().then(function(keys) {
+        for (var i = 0; i < keys.length; i++) {
+          caches.delete(keys[i]);
+        }
+      });
+    }
+  </script>
+</head>
+<body>
+
+  <!-- Header Điều Hướng -->
+  <header class="app-header">
+    <div class="header-inner">
+      <div class="logo-group" onclick="window.navigateView('dashboard')">
+        <img src="icons/icon-192.svg" alt="VocabMaster Logo" class="app-icon-img">
+        <span class="app-title-text">VocabMaster Pro</span>
+      </div>
+
+      <!-- 4 Nút Điều Hướng Chính (Dùng button để không bao giờ bị đơ URL hash) -->
+      <nav class="header-nav-links">
+        <button type="button" class="nav-link nav-active" data-nav="dashboard" onclick="window.navigateView('dashboard')">
+          <span class="nav-icon">🏠</span> <span>Trang Chủ</span>
+        </button>
+        <button type="button" class="nav-link" data-nav="folders" onclick="window.navigateView('folders')">
+          <span class="nav-icon">📁</span> <span>Thư Mục</span>
+        </button>
+        <button type="button" class="nav-link" data-nav="modules" onclick="window.navigateView('modules')">
+          <span class="nav-icon">📚</span> <span>Học Phần</span>
+        </button>
+        <button type="button" class="nav-link" data-nav="analytics" onclick="window.navigateView('analytics')">
+          <span class="nav-icon">📊</span> <span>Lịch &amp; Tiến Độ</span>
+        </button>
+      </nav>
+
+      <div class="header-status-group">
+        <!-- Nút Tạo Flashcard Nhanh Trên Thanh Header -->
+        <button type="button" class="btn-primary btn-header-add" onclick="window.openCardModalAction()" title="Thêm từ vựng mới">
+          <span>➕</span> <span class="btn-text-hide-mobile">Thêm Thẻ</span>
+        </button>
+        <div id="online-status-badge" class="status-indicator status-online">
+          <span class="status-dot"></span> <span class="status-text-mobile">Online</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Vùng Nội Dung Chính (Single Page Application) -->
+  <main class="app-container">
+
+    <!-- 1. MÀN HÌNH TRANG CHỦ (DASHBOARD) -->
+    <section id="view-dashboard" class="app-view">
+      <!-- 4 Thẻ chỉ số tổng quan -->
+      <div class="dashboard-grid">
+        <div class="stat-card" onclick="window.navigateView('analytics')" style="cursor: pointer;" title="Nhấn để xem Lịch & Tiến độ">
+          <div class="stat-card-icon">🔥</div>
+          <div>
+            <div id="dash-streak-count" class="stat-card-val text-warning">0 ngày</div>
+            <div class="stat-card-lbl">Chuỗi ngày học liên tiếp</div>
+          </div>
+        </div>
+        <div class="stat-card" onclick="window.navigateView('modules')" style="cursor: pointer;" title="Nhấn để xem danh sách Học phần">
+          <div class="stat-card-icon">📖</div>
+          <div>
+            <div id="dash-total-words" class="stat-card-val text-primary">0 từ</div>
+            <div class="stat-card-lbl">Tổng số từ vựng trong kho</div>
+          </div>
+        </div>
+        <div class="stat-card" onclick="window.app && window.app.cramDueCards()" style="cursor: pointer;" title="Nhấn để ôn từ đến hạn">
+          <div class="stat-card-icon">⏰</div>
+          <div>
+            <div id="dash-due-words" class="stat-card-val text-danger">0 từ</div>
+            <div class="stat-card-lbl">Đến hạn ôn tập hôm nay (SRS)</div>
+          </div>
+        </div>
+        <div class="stat-card" onclick="window.navigateView('analytics')" style="cursor: pointer;" title="Nhấn để xem Tỷ lệ ghi nhớ">
+          <div class="stat-card-icon">🧠</div>
+          <div>
+            <div id="dash-retention-rate" class="stat-card-val text-success">0%</div>
+            <div class="stat-card-lbl">Tỷ lệ ghi nhớ dài hạn</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Banner Bộ Xử Lý Chẩn Đoán Lỗ Hổng Kiến Thức (SRS Gap Analyzer) -->
+      <div class="diagnosis-banner">
+        <div>
+          <div class="diagnosis-header">🔍 Bộ Xử Lý Chẩn Đoán Tiến Độ Học Tập:</div>
+          <div id="dash-diagnosis-msg" class="diagnosis-msg">Đang phân tích các lỗ hổng từ vựng...</div>
+        </div>
+        <div class="diagnosis-actions">
+          <button type="button" class="btn-primary" onclick="window.app && window.app.cramDueCards()">
+            ⚡ Ôn từ đến hạn ngay
+          </button>
+          <button type="button" class="btn-secondary" onclick="window.app && window.app.cramWeakCards()">
+            🎯 Luyện từ hay sai
+          </button>
+          <button type="button" class="btn-success-action" onclick="window.openCardModalAction()">
+            ➕ Thêm Flashcard Mới
+          </button>
+        </div>
+      </div>
+
+      <!-- Danh sách từ cần chú ý gấp & Lịch hoạt động thu nhỏ -->
+      <div class="section-header-bar">
+        <h2 class="section-title">⚡ Các Từ Vựng Cần Chú Ý Hôm Nay</h2>
+        <button type="button" class="btn-secondary" onclick="window.navigateView('modules')">Xem tất cả học phần ➡️</button>
+      </div>
+
+      <div id="dash-weak-words-list" class="mb-6"></div>
+
+      <!-- Lịch hoạt động thu nhỏ trên Dashboard -->
+      <div class="section-header-bar" style="margin-top: 36px;">
+        <h2 class="section-title">📅 Lịch Học Hoạt Động (Heatmap)</h2>
+        <button type="button" class="btn-secondary" onclick="window.navigateView('analytics')">Chi tiết tiến độ ➡️</button>
+      </div>
+      <div class="calendar-widget-box">
+        <div id="dash-mini-calendar"></div>
+        <div id="calendar-day-detail-box" class="hidden"></div>
+      </div>
+    </section>
+
+    <!-- 2. MÀN HÌNH QUẢN LÝ THƯ MỤC (FOLDERS) -->
+    <section id="view-folders" class="app-view hidden">
+      <div class="section-header-bar">
+        <h2 class="section-title">📁 Thư Mục Lưu Trữ Riêng Cho Từng Chủ Đề</h2>
+        <button type="button" class="btn-primary" onclick="window.openFolderModalAction()">
+          + Tạo Thư Mục Mới
+        </button>
+      </div>
+      <p class="text-muted mb-4" style="margin-bottom: 20px;">
+        Mỗi thư mục chứa nhiều học phần theo từng mục tiêu học tập (Giao tiếp, Luyện thi IELTS, Kinh doanh...).
+      </p>
+      <div id="folders-grid-container" class="cards-grid"></div>
+    </section>
+
+    <!-- 3. MÀN HÌNH QUẢN LÝ HỌC PHẦN (MODULES) -->
+    <section id="view-modules" class="app-view hidden">
+      <div class="section-header-bar">
+        <h2 id="modules-view-title" class="section-title">📚 Danh Sách Học Phần</h2>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+          <button type="button" class="btn-secondary" onclick="window.navigateView('folders')">⬅️ Quay lại Thư mục</button>
+          <button type="button" class="btn-secondary" onclick="window.openCardModalAction()">+ Thêm Thẻ Mới</button>
+          <button type="button" class="btn-primary" onclick="window.openModuleModalAction()">+ Tạo Học Phần Mới</button>
+        </div>
+      </div>
+      <div id="modules-grid-container" class="cards-grid"></div>
+    </section>
+
+    <!-- 4. MÀN HÌNH QUẢN LÝ FLASHCARD TRONG HỌC PHẦN (CARDS) -->
+    <section id="view-cards" class="app-view hidden">
+      <div class="section-header-bar">
+        <h2 id="cards-view-title" class="section-title">🃏 Danh Sách Flashcard</h2>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+          <button type="button" class="btn-secondary" onclick="window.navigateView('modules')">⬅️ Quay lại Học phần</button>
+          <button type="button" class="btn-primary" onclick="window.openCardModalAction()">+ Thêm Flashcard Mới</button>
+        </div>
+      </div>
+      <div id="cards-list-container" class="cards-list-view"></div>
+    </section>
+
+    <!-- 5. MÀN HÌNH HỌC FLASHCARD & VUỐT THẺ (STUDY VIEW) -->
+    <section id="view-study" class="app-view hidden">
+      <div class="study-viewport">
+        <!-- Tiến độ học -->
+        <div class="study-header-progress">
+          <div class="study-meta-row">
+            <button type="button" class="btn-secondary" style="padding: 4px 10px; font-size: 0.85rem;" onclick="window.navigateView('modules')">✕ Dừng học</button>
+            <span id="study-progress-counter">0 / 0</span>
+          </div>
+          <div class="study-progress-track" style="margin-top: 8px;">
+            <div id="study-progress-bar" class="study-progress-fill" style="width: 0%;"></div>
+          </div>
+        </div>
+
+        <!-- Khung Thẻ Vuốt & Animation -->
+        <div id="study-card-container" style="width: 100%;"></div>
+
+        <!-- Thanh Nút Thao Tác Hỗ Trợ Máy Tính -->
+        <div class="study-controls-bar">
+          <button type="button" class="btn-swipe-action btn-swipe-forgot" onclick="window.studySession && window.studySession.handleAnswer(false)">
+            <span>👈</span> CHƯA NHỚ (Phím ⬅️)
+          </button>
+          <button type="button" class="btn-swipe-action btn-swipe-remember" onclick="window.studySession && window.studySession.handleAnswer(true)">
+            ĐÃ NHỚ (Phím ➡️) <span>👉</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. MÀN HÌNH TRÒ CHƠI: GHÉP THẺ (CARD MATCH MEMORY) -->
+    <section id="view-game-match" class="app-view hidden">
+      <div class="game-viewport">
+        <div class="game-top-bar">
+          <button type="button" class="btn-secondary" onclick="window.navigateView('modules')">⬅️ Thoát Trò Chơi</button>
+          <h2 style="font-size: 1.4rem; font-weight: 800;">🧩 Ghép Thẻ Trí Nhớ</h2>
+          <div class="game-stats-pills">
+            <div id="match-timer-display" class="game-pill">00:00</div>
+            <div id="match-moves-display" class="game-pill">0 lượt</div>
+          </div>
+        </div>
+        <div id="match-game-board"></div>
+      </div>
+    </section>
+
+    <!-- 7. MÀN HÌNH TRÒ CHƠI: NỐI TỪ (WORD CONNECTION) -->
+    <section id="view-game-connect" class="app-view hidden">
+      <div class="game-viewport">
+        <div class="game-top-bar">
+          <button type="button" class="btn-secondary" onclick="window.navigateView('modules')">⬅️ Thoát Trò Chơi</button>
+          <h2 style="font-size: 1.4rem; font-weight: 800;">🔗 Nối Từ Siêu Tốc</h2>
+          <div></div>
+        </div>
+        <div id="connect-game-board"></div>
+      </div>
+    </section>
+
+    <!-- 8. MÀN HÌNH BÀI KIỂM TRA TRẮC NGHIỆM (QUIZ) -->
+    <section id="view-quiz" class="app-view hidden">
+      <div class="quiz-viewport">
+        <div class="study-header-progress">
+          <div class="study-meta-row">
+            <button type="button" class="btn-secondary" style="padding: 4px 10px; font-size: 0.85rem;" onclick="window.navigateView('modules')">✕ Dừng kiểm tra</button>
+            <span id="quiz-counter-text">Câu 1 / 10</span>
+          </div>
+          <div class="study-progress-track" style="margin-top: 8px;">
+            <div id="quiz-progress-bar" class="study-progress-fill" style="width: 0%;"></div>
+          </div>
+        </div>
+
+        <div id="quiz-active-container"></div>
+      </div>
+    </section>
+
+    <!-- 9. MÀN HÌNH THEO DÕI TIẾN ĐỘ & LỊCH HỌC (ANALYTICS) -->
+    <section id="view-analytics" class="app-view hidden">
+      <div class="section-header-bar">
+        <h2 class="section-title">📊 Theo Dõi Tiến Độ Học Tập Ngày / Tháng / Năm</h2>
+      </div>
+
+      <div class="dashboard-grid">
+        <div class="stat-card">
+          <div class="stat-card-icon">🔥</div>
+          <div>
+            <div id="analytics-streak-display" class="stat-card-val text-warning">0 Ngày</div>
+            <div class="stat-card-lbl">Kỷ lục chuỗi ngày học liên tục</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-icon">🃏</div>
+          <div>
+            <div id="analytics-total-cards" class="stat-card-val text-primary">0</div>
+            <div class="stat-card-lbl">Tổng số thẻ từ vựng</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-icon">📈</div>
+          <div>
+            <div id="analytics-retention-score" class="stat-card-val text-success">0%</div>
+            <div class="stat-card-lbl">Điểm lưu giữ trí nhớ dài hạn</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Phân bố theo các mốc thời gian SRS (1 ngày, 3 ngày, 1 tuần, 1 tháng) -->
+      <div class="calendar-widget-box mb-6" style="margin-bottom: 24px;">
+        <h3 style="margin-bottom: 16px; font-size: 1.15rem; font-weight: 800;">
+          ⏳ Phân Bố Từ Vựng Theo Chu Kỳ Lặp Lại Ngắt Quãng (SRS):
+        </h3>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px;">
+          <div class="stat-pill" style="border: 1px solid #475569;">
+            <span class="stat-val" id="dist-stage-0">0</span>
+            <span class="stat-lbl">Hộp 0: Mới học</span>
+          </div>
+          <div class="stat-pill" style="border: 1px solid #3b82f6;">
+            <span class="stat-val text-primary" id="dist-stage-1">0</span>
+            <span class="stat-lbl">Hộp 1: 1 Ngày</span>
+          </div>
+          <div class="stat-pill" style="border: 1px solid #8b5cf6;">
+            <span class="stat-val" style="color: #a78bfa;" id="dist-stage-2">0</span>
+            <span class="stat-lbl">Hộp 2: 3 Ngày</span>
+          </div>
+          <div class="stat-pill" style="border: 1px solid #ec4899;">
+            <span class="stat-val" style="color: #f472b6;" id="dist-stage-3">0</span>
+            <span class="stat-lbl">Hộp 3: 1 Tuần</span>
+          </div>
+          <div class="stat-pill" style="border: 1px solid #10b981;">
+            <span class="stat-val text-success" id="dist-stage-4">0</span>
+            <span class="stat-lbl">Hộp 4: 1 Tháng</span>
+          </div>
+          <div class="stat-pill" style="border: 1px solid #f59e0b;">
+            <span class="stat-val text-warning" id="dist-stage-5">0</span>
+            <span class="stat-lbl">Hộp 5: Thành thạo</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Lịch Học Chi Tiết Toàn Bộ Năm/Tháng -->
+      <div class="calendar-widget-box">
+        <h3 style="margin-bottom: 16px; font-size: 1.15rem; font-weight: 800;">
+          📅 Lịch Hoạt Động Học Tập Theo Ngày Tháng Năm:
+        </h3>
+        <div id="analytics-full-calendar"></div>
+        <div id="analytics-day-detail-box" class="hidden" style="margin-top: 16px;"></div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ==================== CÁC MODAL DIALOGS ==================== -->
+
+  <!-- Modal 1: Tạo / Sửa Thư Mục -->
+  <div id="modal-folder" class="modal-overlay hidden">
+    <div class="modal-content-card">
+      <div class="modal-header">
+        <h3 id="modal-folder-title" class="modal-title">Tạo Thư Mục Mới</h3>
+        <button class="btn-close-modal" onclick="document.getElementById('modal-folder').classList.add('hidden')">✕</button>
+      </div>
+      <div id="folder-form-error" class="form-error-banner hidden"></div>
+      <input type="hidden" id="folder-input-id">
+      <div class="form-group">
+        <label class="form-label">Tên thư mục *</label>
+        <input type="text" id="folder-input-name" class="form-input" placeholder="Ví dụ: Tiếng Anh Giao Tiếp Hàng Ngày">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Mô tả ngắn</label>
+        <textarea id="folder-input-desc" class="form-textarea" rows="2" placeholder="Mục đích hoặc các lưu ý về thư mục này..."></textarea>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Biểu tượng (Icon)</label>
+          <input type="text" id="folder-input-icon" class="form-input" value="📁">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Màu sắc nhận diện</label>
+          <input type="color" id="folder-input-color" class="form-input" value="#3b82f6" style="height: 44px; padding: 4px;">
+        </div>
+      </div>
+      <div class="modal-actions-footer">
+        <button type="button" class="btn-secondary" onclick="document.getElementById('modal-folder').classList.add('hidden')">Hủy</button>
+        <button type="button" id="btn-save-folder" class="btn-primary" onclick="window.saveFolderAction()">Lưu Thư Mục</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 2: Tạo / Sửa Học Phần -->
+  <div id="modal-module" class="modal-overlay hidden">
+    <div class="modal-content-card">
+      <div class="modal-header">
+        <h3 class="modal-title">Tạo Học Phần Mới</h3>
+        <button class="btn-close-modal" onclick="document.getElementById('modal-module').classList.add('hidden')">✕</button>
+      </div>
+      <div id="module-form-error" class="form-error-banner hidden"></div>
+      <div class="form-group">
+        <label class="form-label">Thuộc Thư Mục *</label>
+        <select id="module-select-folder" class="form-select"></select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Tên học phần *</label>
+        <input type="text" id="module-input-title" class="form-input" placeholder="Ví dụ: Bài 1 - Phỏng Vấn &amp; Công Sở">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Mô tả học phần</label>
+        <textarea id="module-input-desc" class="form-textarea" rows="2" placeholder="Ghi chú nội dung trọng tâm của bài học..."></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Thẻ gắn nhãn (cách nhau bởi dấu phẩy)</label>
+        <input type="text" id="module-input-tags" class="form-input" placeholder="Work, Office, B2">
+      </div>
+      <div class="modal-actions-footer">
+        <button type="button" class="btn-secondary" onclick="document.getElementById('modal-module').classList.add('hidden')">Hủy</button>
+        <button type="button" id="btn-save-module" class="btn-primary" onclick="window.saveModuleAction()">Lưu Học Phần</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 3: Tạo Flashcard Nhanh (Chỉ cần Từ & Từ Loại - Còn lại tự động 100%) -->
+  <div id="modal-card" class="modal-overlay hidden">
+    <div class="modal-content-card" style="max-width: 580px;">
+      <div class="modal-header">
+        <h3 class="modal-title">🃏 Thêm Flashcard Thông Minh</h3>
+        <button class="btn-close-modal" onclick="document.getElementById('modal-card').classList.add('hidden')">✕</button>
+      </div>
+
+      <div id="card-form-error" class="form-error-banner hidden"></div>
+
+      <!-- 1. Chọn học phần -->
+      <div class="form-group">
+        <label class="form-label">Thuộc Học Phần *</label>
+        <select id="card-select-module" class="form-select"></select>
+      </div>
+
+      <!-- 2. Từ vựng tiếng Anh -->
+      <div class="form-group">
+        <label class="form-label" style="font-size: 1rem; color: #60a5fa;">Từ Vựng Tiếng Anh *</label>
+        <input type="text" id="card-input-word" class="form-input" style="font-size: 1.15rem; font-weight: 700; padding: 12px 16px;" placeholder="Gõ từ tiếng Anh (ví dụ: resilience, ephemeral, apple...)">
+      </div>
+
+      <!-- 3. Từ loại -->
+      <div class="form-group">
+        <label class="form-label" style="font-size: 1rem; color: #a78bfa;">Từ Loại (Part of Speech)</label>
+        <select id="card-input-type" class="form-select" style="font-size: 1rem; padding: 10px 14px;">
+          <option value="noun">Danh từ (Noun)</option>
+          <option value="verb">Động từ (Verb)</option>
+          <option value="adjective">Tính từ (Adjective)</option>
+          <option value="adverb">Trạng từ (Adverb)</option>
+          <option value="idiom">Cụm từ / Thành ngữ (Idiom / Phrasal Verb)</option>
+        </select>
+      </div>
+
+      <!-- Banner thông báo tự động điền -->
+      <div class="auto-fill-info-banner">
+        <div style="font-weight: 700; color: #34d399; margin-bottom: 4px;">✨ Tự động hoàn thiện 100%:</div>
+        <div style="font-size: 0.85rem; color: #cbd5e1; line-height: 1.4;">
+          Bạn chỉ cần nhập <strong>Từ vựng</strong> và <strong>Từ loại</strong>. Hệ thống sẽ tự động tra cứu: Phiên âm IPA (UK &amp; US), Cấp độ CEFR (A1-C1), Nghĩa tiếng Việt chuẩn Cambridge, Ví dụ song ngữ và Lưu ý ngữ pháp.
+        </div>
+      </div>
+
+      <!-- Nút mở rộng xem chi tiết nâng cao (Mặc định ẩn) -->
+      <div style="margin: 14px 0;">
+        <button type="button" class="btn-toggle-advanced" onclick="document.getElementById('card-advanced-fields').classList.toggle('hidden')">
+          ⚙️ Tùy chỉnh chi tiết nâng cao (Nghĩa, IPA, Ví dụ...) ▾
+        </button>
+      </div>
+
+      <div id="card-advanced-fields" class="hidden advanced-fields-box">
+        <div class="form-group">
+          <label class="form-label">Nghĩa tiếng Việt (Tùy chọn - để trống để tự động dịch):</label>
+          <input type="text" id="card-input-meaning-vi" class="form-input" placeholder="Tự động dịch nếu để trống">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Phiên âm UK:</label>
+            <input type="text" id="card-input-ipa-uk" class="form-input" placeholder="Tự động điền">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Phiên âm US:</label>
+            <input type="text" id="card-input-ipa-us" class="form-input" placeholder="Tự động điền">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Cấp độ CEFR:</label>
+            <select id="card-input-cefr" class="form-select">
+              <option value="A1">A1 - Sơ cấp</option>
+              <option value="A2">A2 - Sơ trung cấp</option>
+              <option value="B1" selected>B1 - Trung cấp</option>
+              <option value="B2">B2 - Trung cao cấp</option>
+              <option value="C1">C1 - Nâng cao</option>
+              <option value="C2">C2 - Bản xứ</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Định nghĩa tiếng Anh:</label>
+            <input type="text" id="card-input-meaning-en" class="form-input" placeholder="Tự động điền">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Câu ví dụ tiếng Anh &amp; Dịch nghĩa:</label>
+          <input type="text" id="card-input-example-en" class="form-input mb-2" placeholder="Ví dụ tiếng Anh">
+          <input type="text" id="card-input-example-vi" class="form-input" placeholder="Dịch câu ví dụ">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Ghi chú ngữ pháp:</label>
+          <input type="text" id="card-input-notes" class="form-input" placeholder="Tự động tạo">
+        </div>
+      </div>
+
+      <div class="modal-actions-footer">
+        <button type="button" class="btn-secondary" onclick="document.getElementById('modal-card').classList.add('hidden')">Hủy</button>
+        <button type="button" id="btn-save-card" class="btn-primary" style="padding: 12px 24px; font-size: 1rem;" onclick="window.saveCardAction()">
+          💾 Lưu Flashcard Ngay
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 4: Cấu hình Bài Kiểm Tra Trắc Nghiệm Cuối Học Phần -->
+  <div id="quiz-setup-modal" class="modal-overlay hidden">
+    <div class="modal-content-card">
+      <div class="modal-header">
+        <h3 class="modal-title">⚙️ Tùy Chỉnh Bài Kiểm Tra Cuối Học Phần</h3>
+        <button class="btn-close-modal" onclick="document.getElementById('quiz-setup-modal').classList.add('hidden')">✕</button>
+      </div>
+
+      <p class="text-muted" style="margin-bottom: 16px;">
+        Hệ thống hỗ trợ kiểm tra ngữ nghĩa chuyên sâu với giải thích chi tiết bên dưới mỗi câu trả lời.
+      </p>
+
+      <div class="form-group">
+        <label class="form-label">Số lượng câu hỏi:</label>
+        <select id="quiz-question-count" class="form-select">
+          <option value="5">5 câu (Nhanh)</option>
+          <option value="10" selected>10 câu (Tiêu chuẩn)</option>
+          <option value="15">15 câu (Chuyên sâu)</option>
+          <option value="all">Toàn bộ thẻ trong học phần (<span id="quiz-setup-total-cards"></span>)</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Hình thức câu hỏi:</label>
+        <select id="quiz-question-type" class="form-select">
+          <option value="mc" selected>Trắc nghiệm 4 phương án (Chọn nghĩa đúng)</option>
+          <option value="tf">Đúng / Sai (Xác nhận nghĩa cặp Từ - Nghĩa)</option>
+          <option value="both">Kết hợp cả 4 phương án và Đúng/Sai</option>
+        </select>
+      </div>
+
+      <div class="modal-actions-footer">
+        <button type="button" class="btn-secondary" onclick="document.getElementById('quiz-setup-modal').classList.add('hidden')">Hủy</button>
+        <button type="button" class="btn-primary" onclick="window.quizEngine && window.quizEngine.startQuizFromSetup()">
+          Bắt Đầu Kiểm Tra 🚀
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tải Dữ Liệu & Các Scripts Cốt Lõi với Cache-Bust v3.0 -->
+  <script src="data/sampleDecks.js?v=4.0"></script>
+  <script src="js/db.js?v=4.0"></script>
+  <script src="js/audio.js?v=4.0"></script>
+  <script src="js/dictionary.js?v=4.0"></script>
+  <script src="js/srs.js?v=4.0"></script>
+  <script src="js/swipe.js?v=4.0"></script>
+  <script src="js/games.js?v=4.0"></script>
+  <script src="js/quiz.js?v=4.0"></script>
+  <script src="js/analytics.js?v=4.0"></script>
+  <script src="js/app.js?v=4.0"></script>
+
+  <!-- BỘ HÀM ĐIỀU HƯỚNG & HÀNH ĐỘNG TOÀN CỤC CHỐNG ĐƠ TRÌNH DUYỆT -->
+  <script>
+    // 1. Chuyển đổi màn hình chống đơ (Fail-Safe Navigation)
+    window.navigateView = function(viewName, params) {
+      if (window.app && typeof window.app.navigate === 'function') {
+        window.app.navigate(viewName, params || {});
+      } else {
+        // Fallback trực tiếp vào DOM nếu app chưa tải xong
+        document.querySelectorAll('.app-view').forEach(function(el) { el.classList.add('hidden'); });
+        var target = document.getElementById('view-' + viewName);
+        if (target) target.classList.remove('hidden');
+        document.querySelectorAll('[data-nav]').forEach(function(el) {
+          if (el.dataset.nav === viewName) el.classList.add('nav-active');
+          else el.classList.remove('nav-active');
+        });
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    };
+
+    // 2. Mở Modal Thư mục chống đơ
+    window.openFolderModalAction = function() {
+      if (window.app) {
+        window.app.openCreateFolderModal();
+      } else {
+        var m = document.getElementById('modal-folder');
+        if (m) m.classList.remove('hidden');
+      }
+    };
+
+    // 3. Mở Modal Học phần chống đơ
+    window.openModuleModalAction = function() {
+      if (window.app) {
+        window.app.openCreateModuleModal();
+      } else {
+        var m = document.getElementById('modal-module');
+        if (m) m.classList.remove('hidden');
+      }
+    };
+
+    // 4. Mở Modal Thêm Flashcard chống đơ
+    window.openCardModalAction = async function(moduleId) {
+      if (window.app && typeof window.app.openCreateCardModal === 'function') {
+        await window.app.openCreateCardModal(moduleId);
+      } else {
+        var m = document.getElementById('modal-card');
+        if (m) m.classList.remove('hidden');
+      }
+    };
+
+    // 5. Lưu Thư mục với cơ chế phản hồi tức thì
+    window.saveFolderAction = async function() {
+      var btn = document.getElementById('btn-save-folder');
+      var errBox = document.getElementById('folder-form-error');
+      if (errBox) errBox.classList.add('hidden');
+
+      var nameInput = document.getElementById('folder-input-name');
+      var name = nameInput ? nameInput.value.trim() : '';
+
+      if (!name) {
+        if (errBox) {
+          errBox.textContent = '⚠️ Vui lòng nhập tên thư mục!';
+          errBox.classList.remove('hidden');
+        } else {
+          alert('Vui lòng nhập tên thư mục!');
+        }
+        if (nameInput) nameInput.focus();
+        return;
+      }
+
+      if (btn) btn.textContent = '⏳ Đang lưu...';
+      try {
+        if (window.app && typeof window.app.saveFolderFromModal === 'function') {
+          await window.app.saveFolderFromModal();
+        } else {
+          // LocalStorage fallback nếu app chưa khởi tạo
+          var id = document.getElementById('folder-input-id').value || ('folder-' + Date.now());
+          var desc = document.getElementById('folder-input-desc').value.trim();
+          var icon = document.getElementById('folder-input-icon').value.trim() || '📁';
+          var color = document.getElementById('folder-input-color').value || '#3b82f6';
+          var folders = JSON.parse(localStorage.getItem('vm_folders') || '[]');
+          folders.push({ id: id, name: name, description: desc, icon: icon, color: color, createdAt: new Date().toISOString() });
+          localStorage.setItem('vm_folders', JSON.stringify(folders));
+          document.getElementById('modal-folder').classList.add('hidden');
+          alert('Đã lưu thư mục thành công!');
+        }
+      } catch (e) {
+        console.error('Lỗi lưu thư mục:', e);
+        if (errBox) {
+          errBox.textContent = 'Lỗi: ' + (e.message || e);
+          errBox.classList.remove('hidden');
+        }
+      } finally {
+        if (btn) btn.textContent = 'Lưu Thư Mục';
+      }
+    };
+
+    // 6. Lưu Học phần với phản hồi tức thì
+    window.saveModuleAction = async function() {
+      var btn = document.getElementById('btn-save-module');
+      var errBox = document.getElementById('module-form-error');
+      if (errBox) errBox.classList.add('hidden');
+
+      var titleInput = document.getElementById('module-input-title');
+      var title = titleInput ? titleInput.value.trim() : '';
+
+      if (!title) {
+        if (errBox) {
+          errBox.textContent = '⚠️ Vui lòng nhập tên học phần!';
+          errBox.classList.remove('hidden');
+        } else {
+          alert('Vui lòng nhập tên học phần!');
+        }
+        if (titleInput) titleInput.focus();
+        return;
+      }
+
+      if (btn) btn.textContent = '⏳ Đang lưu...';
+      try {
+        if (window.app && typeof window.app.saveModuleFromModal === 'function') {
+          await window.app.saveModuleFromModal();
+        }
+      } catch (e) {
+        console.error('Lỗi lưu học phần:', e);
+        if (errBox) {
+          errBox.textContent = 'Lỗi: ' + (e.message || e);
+          errBox.classList.remove('hidden');
+        }
+      } finally {
+        if (btn) btn.textContent = 'Lưu Học Phần';
+      }
+    };
+
+    // 7. Lưu Flashcard với phản hồi tức thì
+    window.saveCardAction = async function() {
+      var btn = document.getElementById('btn-save-card');
+      var errBox = document.getElementById('card-form-error');
+      if (errBox) errBox.classList.add('hidden');
+
+      var wordInput = document.getElementById('card-input-word');
+      var word = wordInput ? wordInput.value.trim() : '';
+
+      if (!word) {
+        if (errBox) {
+          errBox.textContent = '⚠️ Vui lòng nhập từ tiếng Anh!';
+          errBox.classList.remove('hidden');
+        } else {
+          alert('Vui lòng nhập từ tiếng Anh!');
+        }
+        if (wordInput) wordInput.focus();
+        return;
+      }
+
+      if (btn) btn.textContent = '⏳ Đang lưu...';
+      try {
+        if (window.app && typeof window.app.saveCardFromModal === 'function') {
+          await window.app.saveCardFromModal();
+        }
+      } catch (e) {
+        console.error('Lỗi lưu thẻ:', e);
+        if (errBox) {
+          errBox.textContent = 'Lỗi: ' + (e.message || e);
+          errBox.classList.remove('hidden');
+        }
+      } finally {
+        if (btn) btn.textContent = 'Lưu Flashcard';
+      }
+    };
+  </script>
+</body>
+</html>

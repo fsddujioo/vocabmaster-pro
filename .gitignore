@@ -1,0 +1,27 @@
+# OS Generated Files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+desktop.ini
+$RECYCLE.BIN/
+
+# Temporary and log files
+*.tmp
+*.log
+*.bak
+*.swp
+*.swo
+
+# User-specific desktop shortcuts
+*.lnk
+
+# IDE / Editor Files
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Archive packages
+*.zip
+*.tar.gz
+*.rar
