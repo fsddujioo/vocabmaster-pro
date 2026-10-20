@@ -1,41 +1,40 @@
 Option Explicit
-Dim objShell, objHttp, isRunning, pyExe, fso, appDir
-
-Set objShell = CreateObject("WScript.Shell")
+Dim shell, fso, appDir, nodeExe, probe, ready, attempt
+Set shell = CreateObject("WScript.Shell")
 Set fso = CreateObject("Scripting.FileSystemObject")
 appDir = fso.GetParentFolderName(WScript.ScriptFullName)
-objShell.CurrentDirectory = appDir
-
-' Detect python
-pyExe = ""
-If fso.FileExists("C:\msys64\ucrt64\bin\python.exe") Then
-    pyExe = "C:\msys64\ucrt64\bin\python.exe"
+shell.CurrentDirectory = appDir
+nodeExe = shell.ExpandEnvironmentStrings("%ProgramFiles%\nodejs\node.exe")
+If Not fso.FileExists(nodeExe) Then nodeExe = "node"
+Function IsReady()
+  Dim req
+  IsReady = False
+  On Error Resume Next
+  Set req = CreateObject("MSXML2.ServerXMLHTTP.6.0")
+  req.setTimeouts 300, 300, 300, 300
+  req.Open "GET", "http://localhost:8080/api/health", False
+  req.Send
+  If Err.Number = 0 Then
+    If req.Status = 200 And InStr(req.responseText, "VocabMaster Pro") > 0 Then IsReady = True
+  End If
+  Err.Clear
+  On Error GoTo 0
+End Function
+ready = IsReady()
+If Not ready Then
+  On Error Resume Next
+  shell.Run Chr(34) & nodeExe & Chr(34) & " " & Chr(34) & appDir & "\server.cjs" & Chr(34), 0, False
+  On Error GoTo 0
+  For attempt = 1 To 30
+    WScript.Sleep 200
+    If IsReady() Then
+      ready = True
+      Exit For
+    End If
+  Next
+End If
+If ready Then
+  shell.Run "http://localhost:8080/index.html"
 Else
-    On Error Resume Next
-    objShell.Run "python -V", 0, True
-    If Err.Number = 0 Then pyExe = "python"
-    On Error GoTo 0
+  MsgBox "Cannot start VocabMaster on port 8080. Close an old server using that port and try again. Node.js must be installed.", 48, "VocabMaster Pro"
 End If
-
-If pyExe = "" Then
-    ' Neu may nguoi khac khong co python, mo thang index.html
-    objShell.Run "index.html"
-    WScript.Quit
-End If
-
-' Kiem tra server cong 8080 co san sang khong
-isRunning = False
-On Error Resume Next
-Set objHttp = CreateObject("MSXML2.ServerXMLHTTP.6.0")
-objHttp.setTimeouts 300, 300, 300, 300
-objHttp.Open "GET", "http://localhost:8080/index.html", False
-objHttp.Send
-If Err.Number = 0 Then isRunning = True
-On Error GoTo 0
-
-If Not isRunning Then
-    objShell.Run "cmd /c """"" & pyExe & """ -m http.server 8080""", 0, False
-    WScript.Sleep 800
-End If
-
-objShell.Run "http://localhost:8080/index.html"

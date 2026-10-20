@@ -1,0 +1,13 @@
+{
+  "name": "vocabmaster-pro",
+  "version": "5.8.0",
+  "private": true,
+  "description": "Local vocabulary app with Study4 guided IELTS and external grading exchange",
+  "scripts": {
+    "start": "node server.cjs",
+    "test": "node tests/run.cjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

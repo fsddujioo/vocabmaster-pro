@@ -39,8 +39,11 @@ class SoundEngine {
     if (!text) return;
 
     // 1. Thử phát file audio từ điển nếu online và có đường dẫn
-    if (directAudioUrl && navigator.onLine) {
+    if (directAudioUrl && (navigator.onLine || /^data:audio\//.test(directAudioUrl))) {
       const audio = new Audio(directAudioUrl);
+      if (this.currentAudio) this.currentAudio.pause();
+      this.currentAudio = audio;
+      audio.playbackRate = window.vmPremium?.settings?.speechRate || 1;
       const playPromise = audio.play();
       if (playPromise !== undefined) {
         playPromise.catch((err) => {
@@ -66,7 +69,7 @@ class SoundEngine {
     const utterance = new SpeechSynthesisUtterance(text);
     const targetLang = accent === 'UK' ? 'en-GB' : 'en-US';
     utterance.lang = targetLang;
-    utterance.rate = 0.92; // Tốc độ tự nhiên, rõ ràng cho người học
+    utterance.rate = window.vmPremium?.settings?.speechRate || 0.92; // Tốc độ tự nhiên, rõ ràng cho người học
     utterance.pitch = 1.0;
 
     // Lựa chọn voice chuẩn xác nhất cho accent

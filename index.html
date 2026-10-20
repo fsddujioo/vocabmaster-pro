@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
@@ -18,23 +18,16 @@
   <!-- Stylesheet -->
   <link rel="stylesheet" href="css/styles.css?v=4.0">
 
-  <!-- BỘ DỌN DẸP CACHE TỰ ĐỘNG: Hủy Service Worker cũ & Xóa toàn bộ bộ nhớ đệm cũ -->
+  <link rel="stylesheet" href="css/premium.css?v=5.0">
   <script>
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.getRegistrations().then(function(registrations) {
-        for (var i = 0; i < registrations.length; i++) {
-          registrations[i].unregister();
-        }
-      });
-    }
-    if ('caches' in window) {
-      caches.keys().then(function(keys) {
-        for (var i = 0; i < keys.length; i++) {
-          caches.delete(keys[i]);
-        }
-      });
+    if(new URLSearchParams(location.search).get('embedded')==='study4'&&window.self!==window.top)document.documentElement.classList.add('vm-embedded');
+    if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+      window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(console.warn));
     }
   </script>
+  <link rel="stylesheet" href="css/study4.css?v=5.1">
+  <link rel="stylesheet" href="css/ielts-roadmap.css?v=5.8">
+  <link rel="stylesheet" href="css/foundation.css?v=5.8">
 </head>
 <body>
 
@@ -334,6 +327,8 @@
       </div>
     </section>
 
+    <section id="view-learn" class="app-view hidden"><div id="learn-root" class="vm-session"></div></section>
+    <section id="view-studio" class="app-view hidden"><div id="studio-root"></div></section>
   </main>
 
   <!-- ==================== CÁC MODAL DIALOGS ==================== -->
@@ -439,9 +434,9 @@
 
       <!-- Banner thông báo tự động điền -->
       <div class="auto-fill-info-banner">
-        <div style="font-weight: 700; color: #34d399; margin-bottom: 4px;">✨ Tự động hoàn thiện 100%:</div>
+        <div style="font-weight: 700; color: #34d399; margin-bottom: 4px;">✨ Tra cứu hỗ trợ tạo thẻ:</div>
         <div style="font-size: 0.85rem; color: #cbd5e1; line-height: 1.4;">
-          Bạn chỉ cần nhập <strong>Từ vựng</strong> và <strong>Từ loại</strong>. Hệ thống sẽ tự động tra cứu: Phiên âm IPA (UK &amp; US), Cấp độ CEFR (A1-C1), Nghĩa tiếng Việt chuẩn Cambridge, Ví dụ song ngữ và Lưu ý ngữ pháp.
+          Nhập <strong>Từ vựng</strong> và <strong>Từ loại</strong>. App thử tra Free Dictionary API và dịch nghĩa. Dữ liệu không có sẽ để trống; kiểm tra lại nội dung và bổ sung trong Sửa thẻ. Không tự xác nhận CEFR hoặc nguồn Cambridge.
         </div>
       </div>
 
@@ -513,11 +508,11 @@
       </div>
 
       <p class="text-muted" style="margin-bottom: 16px;">
-        Hệ thống hỗ trợ kiểm tra ngữ nghĩa chuyên sâu với giải thích chi tiết bên dưới mỗi câu trả lời.
+        Chọn kiểu câu hỏi, luyện tập hoặc thi có hẹn giờ. Câu viết được so khớp đáp án đã lưu; AI local giải thích khi bạn yêu cầu.
       </p>
 
       <div class="form-group">
-        <label class="form-label">Số lượng câu hỏi:</label>
+        <label for="quiz-question-count" class="form-label">Số lượng câu hỏi:</label>
         <select id="quiz-question-count" class="form-select">
           <option value="5">5 câu (Nhanh)</option>
           <option value="10" selected>10 câu (Tiêu chuẩn)</option>
@@ -527,7 +522,7 @@
       </div>
 
       <div class="form-group">
-        <label class="form-label">Hình thức câu hỏi:</label>
+        <label for="quiz-question-type" class="form-label">Hình thức câu hỏi:</label>
         <select id="quiz-question-type" class="form-select">
           <option value="mc" selected>Trắc nghiệm 4 phương án (Chọn nghĩa đúng)</option>
           <option value="tf">Đúng / Sai (Xác nhận nghĩa cặp Từ - Nghĩa)</option>
@@ -546,15 +541,33 @@
 
   <!-- Tải Dữ Liệu & Các Scripts Cốt Lõi với Cache-Bust v3.0 -->
   <script src="data/sampleDecks.js?v=4.0"></script>
-  <script src="js/db.js?v=4.0"></script>
-  <script src="js/audio.js?v=4.0"></script>
-  <script src="js/dictionary.js?v=4.0"></script>
-  <script src="js/srs.js?v=4.0"></script>
-  <script src="js/swipe.js?v=4.0"></script>
+  <script src="js/learning-core.js?v=5.0"></script>
+  <script src="js/db.js?v=5.0"></script>
+  <script src="js/audio.js?v=5.0"></script>
+  <script src="js/dictionary.js?v=5.0"></script>
+  <script src="js/srs.js?v=5.0"></script>
+  <script src="js/swipe.js?v=5.0"></script>
   <script src="js/games.js?v=4.0"></script>
-  <script src="js/quiz.js?v=4.0"></script>
+  <script src="js/quiz.js?v=5.0"></script>
   <script src="js/analytics.js?v=4.0"></script>
-  <script src="js/app.js?v=4.0"></script>
+  <script src="js/premium.js?v=5.0"></script>
+  <script src="js/learn.js?v=5.0"></script>
+  <script src="js/study4-core.js?v=5.1"></script>
+  <script src="js/study4-save.js?v=5.3"></script>
+  <script src="js/study4-editor.js?v=5.3"></script>
+  <script src="js/study4.js?v=5.3"></script>
+  <script src="js/foundation-data.js?v=5.8"></script>
+  <script src="js/foundation-core.js?v=5.8"></script>
+  <script src="js/foundation-study.js?v=5.8"></script>
+  <script src="js/ielts-plan.js?v=5.8"></script>
+  <script src="js/ielts-core.js?v=5.8"></script>
+  <script src="js/ielts-feedback.js?v=5.8"></script>
+    <script src="js/study4-guided-data.js?v=5.8"></script>
+    <script src="js/study4-external-feedback.js?v=5.8"></script>
+    <script src="js/study4-guided-core.js?v=5.8"></script>
+    <script src="js/study4-guided.js?v=5.8"></script>
+    <script src="js/ielts-roadmap.js?v=5.8"></script>
+  <script src="js/app.js?v=5.0"></script>
 
   <!-- BỘ HÀM ĐIỀU HƯỚNG & HÀNH ĐỘNG TOÀN CỤC CHỐNG ĐƠ TRÌNH DUYỆT -->
   <script>

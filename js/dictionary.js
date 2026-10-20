@@ -1,5 +1,5 @@
-// Module Từ Điển Thông Minh (Cambridge & Translation Integration)
-// Tự động sinh đầy đủ thông tin: IPA UK/US, Nghĩa tiếng Việt, Định nghĩa Cambridge,
+// Module Từ Điển Thông Minh (từ điển & Translation Integration)
+// Tự động sinh đầy đủ thông tin: IPA UK/US, Nghĩa tiếng Việt, Định nghĩa từ điển,
 // Cấp độ CEFR, Câu ví dụ song ngữ, Collocations và Lưu ý ngữ pháp chỉ từ Từ Vựng & Từ Loại.
 
 class DictionaryService {
@@ -16,7 +16,7 @@ class DictionaryService {
     } catch (e) {
       cache = {};
     }
-    // Nạp sẵn từ mẫu Cambridge nếu có
+    // Nạp sẵn từ mẫu từ điển nếu có
     if (typeof SAMPLE_DATA !== 'undefined' && SAMPLE_DATA.cards) {
       SAMPLE_DATA.cards.forEach(c => {
         const w = c.word.toLowerCase();
@@ -25,8 +25,8 @@ class DictionaryService {
             word: c.word,
             wordType: c.wordType || 'noun',
             cefrLevel: c.cefrLevel || 'B1',
-            ipaUk: c.ipaUk || `/${c.word}/`,
-            ipaUs: c.ipaUs || `/${c.word}/`,
+            ipaUk: c.ipaUk || '',
+            ipaUs: c.ipaUs || '',
             audioUkUrl: c.audioUkUrl || '',
             audioUsUrl: c.audioUsUrl || '',
             primaryMeaningVi: c.primaryMeaningVi || '',
@@ -147,7 +147,7 @@ class DictionaryService {
           }
         }
 
-        // Lấy định nghĩa Cambridge & Ví dụ theo từ loại
+        // Lấy định nghĩa từ điển & Ví dụ theo từ loại
         if (entry.meanings && entry.meanings.length > 0) {
           // Ưu tiên nghĩa trùng với preferredType nếu có
           let matchedMeaningGroup = entry.meanings.find(m => m.partOfSpeech === cleanType);
@@ -175,19 +175,11 @@ class DictionaryService {
     // 3. Nếu có câu ví dụ, tự động dịch câu ví dụ sang tiếng Việt
     if (exampleEn) {
       exampleVi = await this.translateToVietnamese(exampleEn);
-    } else {
-      // Tự sinh câu ví dụ mẫu ngữ cảnh
-      exampleEn = `It is important to understand the concept of ${wLower} in daily life.`;
-      exampleVi = `Điều quan trọng là phải hiểu khái niệm về ${primaryMeaningVi || wLower} trong cuộc sống hàng ngày.`;
     }
 
-    // 4. Fallback các giá trị còn thiếu
-    if (!ipaUk) ipaUk = `/${wLower}/`;
+    // Missing dictionary facts stay blank; never fabricate IPA, examples or CEFR.
     if (!ipaUs) ipaUs = ipaUk;
-    if (!primaryMeaningVi) primaryMeaningVi = wLower;
-    if (!primaryMeaningEn) primaryMeaningEn = `The definition and usage of ${wLower}`;
-
-    const cefr = this.estimateCefrLevel(wLower, wLower.length);
+    const cefr = '';
 
     if (definitions.length === 0) {
       definitions = [
@@ -205,7 +197,7 @@ class DictionaryService {
       definitions[0].exampleVi = exampleVi;
     }
 
-    const usageNotes = `Từ loại: ${detectedType}. Cấp độ ước lượng: CEFR ${cefr}. Thường dùng trong văn cảnh giao tiếp và học thuật.`;
+    const usageNotes = 'Nguồn tra cứu: Free Dictionary API; nghĩa tiếng Việt từ dịch máy, cần kiểm tra theo ngữ cảnh. CEFR chưa được xác minh.';
 
     const fullCardData = {
       word: word.charAt(0).toUpperCase() + word.slice(1),

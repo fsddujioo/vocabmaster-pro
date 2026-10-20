@@ -1,0 +1,63 @@
+{
+  "manifest_version": 3,
+  "name": "VocabMaster Study4",
+  "version": "1.2.0",
+  "description": "Lưu từ, ngữ cảnh và lỗi thật từ Study4 vào VocabMaster trên máy.",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAlSfI2rr9kChfH0V2WhjoSaXl7VpOwN/C8RCHPAm67g80gGayAdvVt2Veg4c5sBBKh8Kpwxubz/RmScIExZqTFN29WtmJ9R7yfEO+9l9msq6LuwRXNAsya4oxvYTqg3iGS5CmuoiQBLkV/0XxSKAwhPQDspMY+bKnKb4eshwfmddiKIjN9o1XHotoVZYXXU6Hmtlwvvg2WfdfLQZMk25air3j6PWJT6xcmpVW+Gmxya7QZ1lJ4Ac+cvUkxmNwBg+9OyAHbhccATRW2FgijOM6UjgUlXMCiPCvYfoZGpKu4c4ffqM4h1QbVRCMmb0snZBUgMtK9ryEXLthNx3u2B+QjwIDAQAB",
+  "permissions": [
+    "storage",
+    "contextMenus",
+    "sidePanel",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "https://study4.com/*",
+    "https://www.study4.com/*",
+    "http://localhost:8080/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "VocabMaster · Lưu từ và lỗi Study4"
+  },
+  "side_panel": {
+    "default_path": "panel.html"
+  },
+  "content_scripts": [
+    {
+      "run_at": "document_idle",
+      "all_frames": true,
+      "matches": [
+        "https://study4.com/*",
+        "https://www.study4.com/*"
+      ],
+      "js": [
+        "study4-core.js",
+        "study4-reader.js",
+        "content.js"
+      ],
+      "css": [
+        "content.css"
+      ]
+    }
+  ],
+  "externally_connectable": {
+    "matches": [
+      "http://localhost:8080/*"
+    ]
+  },
+  "commands": {
+    "save-study4-selection": {
+      "description": "Lưu từ/câu đang chọn trên Study4",
+      "suggested_key": {
+        "default": "Alt+Shift+V"
+      }
+    }
+  },
+  "icons": {
+    "48": "icons/48.png",
+    "128": "icons/128.png",
+    "16": "icons/16.png"
+  }
+}

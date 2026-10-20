@@ -23,44 +23,8 @@ class SRSEngine {
 
   // Tính toán trạng thái tiếp theo của thẻ khi học
   // isRemembered: true = Đã nhớ (vuốt sang phải), false = Chưa nhớ (vuốt sang trái)
-  calculateNextState(card, isRemembered) {
-    const now = new Date();
-    let currentStage = card.srsStage || 0;
-    let newStage = currentStage;
-    let reviewCount = (card.reviewCount || 0) + 1;
-    let mistakeCount = card.mistakeCount || 0;
-
-    if (isRemembered) {
-      // Nếu đã nhớ: thăng cấp chu kỳ ngắt quãng
-      newStage = Math.min(5, currentStage + 1);
-    } else {
-      // Nếu chưa nhớ: reset về cấp 1 (1 ngày) hoặc cấp 0 để ôn lại ngay
-      newStage = 1;
-      mistakeCount += 1;
-    }
-
-    // Tính ngày ôn tập tiếp theo
-    const daysToAdd = this.intervals[newStage] || 1;
-    const nextDate = new Date(now);
-    nextDate.setDate(nextDate.getDate() + daysToAdd);
-
-    const history = card.history || [];
-    history.push({
-      date: now.toISOString(),
-      result: isRemembered ? 'remembered' : 'forgotten',
-      stageFrom: currentStage,
-      stageTo: newStage
-    });
-
-    return {
-      ...card,
-      srsStage: newStage,
-      nextReviewDate: nextDate.toISOString(),
-      reviewCount,
-      mistakeCount,
-      lastReviewed: now.toISOString(),
-      history: history.slice(-20) // Giữ 20 lần học gần nhất
-    };
+  calculateNextState(card, rating) {
+    return window.VMLearning.schedule(card, rating);
   }
 
   // Kiểm tra xem thẻ đã đến hạn cần ôn tập hay chưa

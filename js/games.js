@@ -77,14 +77,14 @@ class GameEngine {
     container.innerHTML = `
       <div class="match-grid">
         ${shuffled.map(item => `
-          <div class="match-card" data-id="${item.id}" data-pair="${item.pairId}" data-type="${item.type}">
+          <div class="match-card" data-id="${item.id}" data-pair="${window.VMLearning.escape(item.pairId)}" data-type="${item.type}">
             <div class="match-card-inner">
               <div class="match-card-front">
                 <span class="card-question-mark">?</span>
               </div>
               <div class="match-card-back ${item.type === 'en' ? 'back-en' : 'back-vi'}">
-                <span class="match-card-text">${item.text}</span>
-                ${item.sub ? `<span class="match-card-sub">${item.sub}</span>` : ''}
+                <span class="match-card-text">${window.VMLearning.escape(item.text)}</span>
+                ${item.sub ? `<span class="match-card-sub">${window.VMLearning.escape(item.sub)}</span>` : ''}
               </div>
             </div>
           </div>
@@ -190,10 +190,10 @@ class GameEngine {
           <div class="connect-column left-column">
             <div class="column-header">Từ Tiếng Anh &amp; IPA</div>
             ${leftCol.map(item => `
-              <div class="connect-item item-left" data-pair="${item.pairId}">
-                <div class="item-word-text">${item.word}</div>
-                <div class="item-ipa-text">${item.ipa}</div>
-                <button type="button" class="btn-sound-mini" onclick="event.stopPropagation(); window.soundEngine.speak('${item.word.replace(/'/g, "\\'")}', 'US');">🔊</button>
+              <div class="connect-item item-left" data-pair="${window.VMLearning.escape(item.pairId)}">
+                <div class="item-word-text">${window.VMLearning.escape(item.word)}</div>
+                <div class="item-ipa-text">${window.VMLearning.escape(item.ipa)}</div>
+                <button type="button" class="btn-sound-mini" onclick="event.stopPropagation(); window.soundEngine.speak('${window.app.esc(item.word)}', 'US');">🔊</button>
               </div>
             `).join('')}
           </div>
@@ -202,8 +202,8 @@ class GameEngine {
           <div class="connect-column right-column">
             <div class="column-header">Giải Nghĩa Tiếng Việt</div>
             ${rightCol.map(item => `
-              <div class="connect-item item-right" data-pair="${item.pairId}">
-                <div class="item-meaning-text">${item.meaning}</div>
+              <div class="connect-item item-right" data-pair="${window.VMLearning.escape(item.pairId)}">
+                <div class="item-meaning-text">${window.VMLearning.escape(item.meaning)}</div>
               </div>
             `).join('')}
           </div>

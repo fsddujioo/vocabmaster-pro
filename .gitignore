@@ -25,3 +25,19 @@ $RECYCLE.BIN/
 *.zip
 *.tar.gz
 *.rar
+# Local learner data, pairing credentials, recordings and exports
+.study4-private/
+**/.study4-private/
+*.webm
+*.wav
+*.mp3
+*.m4a
+*progress*.json
+*feedback*.json
+.env
+.env.*
+node_modules/
+outputs/
+qa-*.html
+# Source dependency includes its license; deliberately versioned
+!vendor/pypdf.zip

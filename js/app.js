@@ -1,6 +1,6 @@
 // Bộ Điều Khiển Chính của Ứng Dụng (Application Master Controller)
 // Quản lý chuyển đổi màn hình (Routing), Modal Thư mục, Học phần, Thẻ thông minh
-// và tích hợp Tra cứu Từ điển Cambridge tự động.
+// và tích hợp Tra cứu Từ điển từ điển tự động.
 
 class VocabApp {
 
@@ -16,7 +16,7 @@ class VocabApp {
     const toast = document.createElement('div');
     toast.className = `toast-item toast-${type}`;
     const icon = type === 'success' ? '✅' : (type === 'danger' ? '❌' : 'ℹ️');
-    toast.innerHTML = `<span class="toast-icon">${icon}</span><span>${message}</span>`;
+    toast.innerHTML = `<span class="toast-icon">${icon}</span><span>${window.VMLearning.escape(message)}</span>`;
     container.appendChild(toast);
 
     setTimeout(() => {
@@ -40,8 +40,8 @@ class VocabApp {
 
   // Helper: escape single quotes for inline onclick attributes
   esc(str) {
-    if (!str) return '';
-    return String(str).replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+    const js = String(str || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\r/g, '\\r').replace(/\n/g, '\\n');
+    return window.VMLearning.escape(js);
   }
 
   initNetworkListener() {
@@ -78,11 +78,13 @@ class VocabApp {
     this.bindEvents();
     await this.navigate('dashboard');
     console.log('[App] VocabMaster Pro đã sẵn sàng!');
+    window.dispatchEvent(new Event('vm:ready'));
   }
 
   bindEvents() {
     // Điều hướng navigation bar
     document.querySelectorAll('[data-nav]').forEach(el => {
+      if (el.hasAttribute('onclick')) return;
       el.addEventListener('click', (e) => {
         e.preventDefault();
         const targetView = el.dataset.nav;
@@ -235,12 +237,12 @@ class VocabApp {
             ${urgentCards.map(c => `
               <div class="urgent-card-item">
                 <div class="urgent-card-top">
-                  <span class="badge-cefr badge-cefr-${(c.cefrLevel || 'B1').toLowerCase()}">${c.cefrLevel || 'B1'}</span>
+                  <span class="badge-cefr badge-cefr-${window.VMLearning.escape((c.cefrLevel || '').toLowerCase())}">${window.VMLearning.escape(c.cefrLevel || '—')}</span>
                   <span class="card-stage-tag">Hộp ${c.srsStage || 0}</span>
                 </div>
-                <div class="urgent-card-word">${c.word}</div>
-                <div class="urgent-card-ipa">${c.ipaUk || c.ipaUs || ''}</div>
-                <div class="urgent-card-meaning">${c.primaryMeaningVi || (c.definitions && c.definitions[0] ? c.definitions[0].meaningVi : '')}</div>
+                <div class="urgent-card-word">${window.VMLearning.escape(c.word)}</div>
+                <div class="urgent-card-ipa">${window.VMLearning.escape(c.ipaUk || c.ipaUs || '')}</div>
+                <div class="urgent-card-meaning">${window.VMLearning.escape(c.primaryMeaningVi || (c.definitions && c.definitions[0] ? c.definitions[0].meaningVi : ''))}</div>
                 <div class="urgent-card-actions">
                   <button type="button" class="btn-sound-mini" onclick="window.soundEngine.speak('${this.esc(c.word)}', 'US');">🔊</button>
                   <button type="button" class="btn-study-single" onclick="window.app.studySingleCard('${this.esc(c.id)}')">Ôn từ này</button>
@@ -292,16 +294,16 @@ class VocabApp {
       const folderCardCount = cards.filter(c => moduleIds.includes(c.moduleId)).length;
 
       return `
-        <div class="folder-card" style="border-top: 4px solid ${f.color || '#3b82f6'};" onclick="window.app.navigate('modules', { folderId: '${this.esc(f.id)}' })">
+        <div class="folder-card" style="border-top: 4px solid ${/^#[0-9a-f]{6}$/i.test(f.color||'')?f.color:'#3b82f6'};" onclick="window.app.navigate('modules', { folderId: '${this.esc(f.id)}' })">
           <div class="folder-card-header">
-            <span class="folder-icon-large">${f.icon || '📁'}</span>
+            <span class="folder-icon-large">${window.VMLearning.escape(f.icon || '📁')}</span>
             <div class="folder-actions" onclick="event.stopPropagation();">
               <button class="btn-action-icon" title="Chỉnh sửa" onclick="window.app.openEditFolderModal('${this.esc(f.id)}')">✏️</button>
               <button class="btn-action-icon text-danger" title="Xóa" onclick="window.app.deleteFolderPrompt('${this.esc(f.id)}')">🗑️</button>
             </div>
           </div>
-          <h3 class="folder-title">${f.name}</h3>
-          <p class="folder-desc">${f.description || 'Không có mô tả'}</p>
+          <h3 class="folder-title">${window.VMLearning.escape(f.name)}</h3>
+          <p class="folder-desc">${window.VMLearning.escape(f.description || 'Không có mô tả')}</p>
           <div class="folder-footer-stats">
             <span>📚 ${folderModules.length} học phần</span>
             <span>🃏 ${folderCardCount} từ vựng</span>
@@ -356,15 +358,15 @@ class VocabApp {
         <div class="module-card">
           <div class="module-card-header">
             <div class="module-tags-row">
-              ${(m.tags || []).map(t => `<span class="module-tag-badge">${t}</span>`).join('')}
+              ${(m.tags || []).map(t => `<span class="module-tag-badge">${window.VMLearning.escape(t)}</span>`).join('')}
             </div>
             <div class="module-menu" onclick="event.stopPropagation();">
               <button class="btn-action-icon text-danger" title="Xóa học phần" onclick="window.app.deleteModulePrompt('${this.esc(m.id)}')">🗑️</button>
             </div>
           </div>
 
-          <h3 class="module-title">${m.title}</h3>
-          <p class="module-desc">${m.description || ''}</p>
+          <h3 class="module-title">${window.VMLearning.escape(m.title)}</h3>
+          <p class="module-desc">${window.VMLearning.escape(m.description || '')}</p>
 
           <div class="module-progress-bar-wrap">
             <div class="progress-bar-track">
@@ -425,7 +427,7 @@ class VocabApp {
         <div class="empty-placeholder-card">
           <span class="placeholder-icon">🃏</span>
           <h3>Chưa có Flashcard nào trong học phần này</h3>
-          <p>Thêm từ vựng đầu tiên của bạn bằng bộ tra cứu từ điển Cambridge tự động.</p>
+          <p>Thêm từ vựng đầu tiên của bạn bằng bộ tra cứu từ điển từ điển tự động.</p>
           <button type="button" class="btn-primary" onclick="window.app.openCreateCardModal()">+ Thêm Flashcard mới</button>
         </div>
       `;
@@ -436,11 +438,11 @@ class VocabApp {
       <div class="card-list-item">
         <div class="item-word-block">
           <div class="item-top-row">
-            <span class="badge-cefr badge-cefr-${(c.cefrLevel || 'B1').toLowerCase()}">CEFR ${c.cefrLevel || 'B1'}</span>
+            <span class="badge-cefr badge-cefr-${window.VMLearning.escape((c.cefrLevel || '').toLowerCase())}">CEFR ${window.VMLearning.escape(c.cefrLevel || '—')}</span>
             <span class="item-word-type">(${c.wordType || 'noun'})</span>
             <span class="item-srs-badge">Hộp SRS: ${c.srsStage || 0}</span>
           </div>
-          <div class="item-word-title">${c.word}</div>
+          <div class="item-word-title">${window.VMLearning.escape(c.word)}</div>
           <div class="item-ipa-row">
             <span class="accent-label">UK:</span> ${c.ipaUk || ''}
             <button class="btn-sound-mini" onclick="window.soundEngine.speak('${this.esc(c.word)}', 'UK', '${this.esc(c.audioUkUrl)}')">🔊</button>
@@ -450,7 +452,7 @@ class VocabApp {
         </div>
 
         <div class="item-meaning-block">
-          <div class="item-meaning-vi"><strong>Nghĩa:</strong> ${c.primaryMeaningVi || (c.definitions && c.definitions[0] ? c.definitions[0].meaningVi : '')}</div>
+          <div class="item-meaning-vi"><strong>Nghĩa:</strong> ${window.VMLearning.escape(c.primaryMeaningVi || (c.definitions && c.definitions[0] ? c.definitions[0].meaningVi : ''))}</div>
           <div class="item-meaning-en text-muted">${c.primaryMeaningEn || (c.definitions && c.definitions[0] ? c.definitions[0].meaningEn : '')}</div>
         </div>
 
@@ -625,7 +627,7 @@ class VocabApp {
     const selectEl = document.getElementById('module-select-folder');
     if (selectEl) {
       selectEl.innerHTML = folders.map(f => `
-        <option value="${f.id}" ${f.id === this.selectedFolderId ? 'selected' : ''}>${f.name}</option>
+        <option value="${window.VMLearning.escape(f.id)}" ${f.id === this.selectedFolderId ? 'selected' : ''}>${window.VMLearning.escape(f.name)}</option>
       `).join('');
     }
 
@@ -687,7 +689,7 @@ class VocabApp {
     const selectEl = document.getElementById('card-select-module');
     if (selectEl) {
       selectEl.innerHTML = modules.map(m => `
-        <option value="${m.id}" ${m.id === targetModuleId ? 'selected' : ''}>${m.title}</option>
+        <option value="${window.VMLearning.escape(m.id)}" ${m.id === targetModuleId ? 'selected' : ''}>${window.VMLearning.escape(m.title)}</option>
       `).join('');
     }
 
@@ -779,7 +781,7 @@ class VocabApp {
       // NẾU NGƯỜI DÙNG CHỈ NHẬP TỪ VỰNG VÀ TỪ LOẠI:
       // TỰ ĐỘNG TRA CỨU 100% CÁC THÔNG TIN CÒN LẠI TỪ CAMBRIDGE & DỊCH THUẬT!
       if (!meaningVi || !ipaUk || !meaningEn) {
-        if (btn) btn.textContent = '⏳ Đang tự động tra Cambridge & dịch nghĩa...';
+        if (btn) btn.textContent = '⏳ Đang tự động tra từ điển & dịch nghĩa...';
         try {
           const enriched = await window.dictionaryService.autoEnrichWord(word, wordType);
           if (enriched) {
@@ -797,7 +799,7 @@ class VocabApp {
         }
       }
 
-      if (!meaningVi) meaningVi = word;
+      if (!meaningVi) { throw new Error('Chưa tra được nghĩa. Vui lòng nhập nghĩa chính xác trước khi lưu.'); }
 
       // Đảm bảo có học phần
       if (!moduleId) {
@@ -815,19 +817,19 @@ class VocabApp {
         word: word.charAt(0).toUpperCase() + word.slice(1),
         wordType,
         cefrLevel: cefr || 'B1',
-        ipaUk: ipaUk || `/${word}/`,
-        ipaUs: ipaUs || ipaUk || `/${word}/`,
+        ipaUk: ipaUk || '',
+        ipaUs: ipaUs || ipaUk || '',
         audioUkUrl: '',
         audioUsUrl: '',
         primaryMeaningVi: meaningVi,
-        primaryMeaningEn: meaningEn || `Definition of ${word}`,
+        primaryMeaningEn: meaningEn || '',
         definitions: [
           {
             meaningVi,
-            meaningEn: meaningEn || `Definition of ${word}`,
+            meaningEn: meaningEn || '',
             context: wordType,
-            exampleEn: exEn || `Example sentence with ${word}.`,
-            exampleVi: exVi || `Câu ví dụ với ${meaningVi}.`
+            exampleEn: exEn || '',
+            exampleVi: exVi || ''
           }
         ],
         usageNotes: notes || `Từ loại: ${wordType}. Cấp độ: CEFR ${cefr}.`,
@@ -840,7 +842,7 @@ class VocabApp {
       this.selectedModuleId = moduleId;
       await this.navigate('cards', { moduleId });
       if (window.soundEngine) window.soundEngine.playCorrectSound();
-      this.showToast(`✅ Đã tạo thẻ "${word}" (${wordType}) với đầy đủ dữ liệu Cambridge!`);
+      this.showToast(`✅ Đã tạo thẻ "${word}" (${wordType}) thành công!`);
     } catch (err) {
       console.error('[App] Lỗi khi lưu flashcard:', err);
       alert('Không thể lưu flashcard: ' + (err.message || err));

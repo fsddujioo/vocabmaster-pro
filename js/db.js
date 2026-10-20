@@ -6,24 +6,8 @@ const DB_VERSION = 1;
 
 class VocabDB {
 
-  // Tự động xóa các nhật ký giả định trước đây để đưa về 0 ngày thật cho người dùng
-  async purgeLegacyFakeLogs() {
-    try {
-      if (localStorage.getItem('vm_study_logs_purged_v4') !== 'true') {
-        console.log('[DB] Đang reset lại toàn bộ ngày học cũ theo yêu cầu người dùng...');
-        localStorage.removeItem('vm_study_logs');
-        if (this.db) {
-          const tx = this.db.transaction('study_logs', 'readwrite');
-          const store = tx.objectStore('study_logs');
-          store.clear();
-        }
-        localStorage.setItem('vm_study_logs_purged_v4', 'true');
-        console.log('[DB] Đã reset ngày học thành công! Bắt đầu tính streak thật.');
-      }
-    } catch (e) {
-      console.warn('[DB] Lỗi purge logs cũ:', e);
-    }
-  }
+  // Existing study history is user data. Startup never deletes it.
+  async purgeLegacyFakeLogs() {}
 
   constructor() {
     this.db = null;
@@ -120,6 +104,7 @@ class VocabDB {
       localStorage.setItem('vm_' + storeName, JSON.stringify(items));
     } catch (e) {
       console.warn('[DB] Không thể ghi LocalStorage:', e);
+      throw new Error('Bộ nhớ đã đầy hoặc không thể ghi. Hãy xuất bản sao lưu trước khi thêm dữ liệu.');
     }
   }
 
@@ -131,22 +116,7 @@ class VocabDB {
       this.lsSetItems('modules', SAMPLE_DATA.modules);
       this.lsSetItems('cards', SAMPLE_DATA.cards);
 
-      const logs = [];
-      const today = new Date();
-      for (let i = 0; i < 5; i++) {
-        const d = new Date(today);
-        d.setDate(d.getDate() - i);
-        const dateStr = d.toISOString().split('T')[0];
-        logs.push({
-          id: 'log-' + dateStr,
-          date: dateStr,
-          cardsReviewed: 10 + i * 2,
-          cardsMastered: 6 + i,
-          quizCount: 2,
-          durationMinutes: 15
-        });
-      }
-      this.lsSetItems('study_logs', logs);
+      // Seed content only; study history starts empty.
     }
   }
 
@@ -190,7 +160,7 @@ class VocabDB {
     const db = await this.ensureDb();
     if (!db) {
       const items = this.lsGetItems(storeName);
-      return items.find(item => item.id === key) || null;
+      return items.find(item => item.id === key || item.key === key) || null;
     }
 
     return new Promise((resolve, reject) => {
@@ -253,38 +223,43 @@ class VocabDB {
   }
 
   async put(storeName, value) {
-    if (this.useLocalStorage) {
-      const items = this.lsGetItems(storeName);
-      const idKey = value.id ? 'id' : 'key';
-      const idx = items.findIndex(item => item[idKey] === value[idKey]);
-      if (idx >= 0) {
-        items[idx] = value;
-      } else {
-        items.push(value);
-      }
-      this.lsSetItems(storeName, items);
-      return value;
-    }
-
     const db = await this.ensureDb();
-    if (!db) {
-      return this.putFallback(storeName, value);
-    }
-
+    if (this.useLocalStorage || !db) return this.putFallback(storeName, value);
     return new Promise((resolve, reject) => {
       try {
         const tx = db.transaction(storeName, 'readwrite');
-        const store = tx.objectStore(storeName);
-        const req = store.put(value);
-        req.onsuccess = () => resolve(req.result);
-        req.onerror = (e) => {
-          this.putFallback(storeName, value);
-          resolve(value);
-        };
-      } catch (err) {
-        this.putFallback(storeName, value);
-        resolve(value);
+        tx.objectStore(storeName).put(value);
+        tx.oncomplete = () => resolve(value);
+        tx.onerror = () => reject(tx.error || new Error('Không thể lưu dữ liệu.'));
+        tx.onabort = () => reject(tx.error || new Error('Giao dịch bị hủy; dữ liệu chưa được lưu.'));
+      } catch (error) { reject(error); }
+    });
+  }
+
+  async putBatch(records) {
+    const names = Object.keys(records);
+    if (names.some(name => !['folders','modules','cards','study_logs','settings'].includes(name))) throw new Error('Kho dữ liệu không hợp lệ.');
+    const db = await this.ensureDb();
+    if (this.useLocalStorage || !db) {
+      const before = Object.fromEntries(names.map(name => [name, localStorage.getItem('vm_' + name)]));
+      try {
+        for (const name of names) {
+          const merged = new Map(this.lsGetItems(name).map(item => [item.id ?? item.key, item]));
+          for (const item of records[name]) merged.set(item.id ?? item.key, item);
+          this.lsSetItems(name, [...merged.values()]);
+        }
+      } catch (error) {
+        for (const name of names) { if (before[name] === null) localStorage.removeItem('vm_' + name); else localStorage.setItem('vm_' + name, before[name]); }
+        throw error;
       }
+      return;
+    }
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction(names, 'readwrite');
+      tx.oncomplete = resolve;
+      tx.onabort = tx.onerror = () => reject(tx.error || new Error('Nhập dữ liệu không thành công.'));
+      try { for (const name of names) for (const value of records[name]) tx.objectStore(name).put(value); }
+      catch(error) { tx.abort(); reject(error); }
     });
   }
 
@@ -453,8 +428,8 @@ class VocabDB {
     
     if (existing) {
       existing.modulesCompleted = (existing.modulesCompleted || 0) + 1;
-      existing.cardsReviewed = (existing.cardsReviewed || 0) + totalCards;
-      existing.cardsMastered = (existing.cardsMastered || 0) + masteredCards;
+      // Card reviews are logged individually, not counted twice at completion.
+
       if (!existing.completedModuleIds) existing.completedModuleIds = [];
       if (moduleId && !existing.completedModuleIds.includes(moduleId)) {
         existing.completedModuleIds.push(moduleId);
@@ -466,10 +441,10 @@ class VocabDB {
       const newLog = {
         id: 'log-' + todayStr,
         date: todayStr,
-        cardsReviewed: totalCards,
-        cardsMastered: masteredCards,
+        cardsReviewed: 0,
+        cardsMastered: 0,
         quizCount: 0,
-        durationMinutes: 8,
+        durationMinutes: 0,
         modulesCompleted: 1,
         completedModuleIds: moduleId ? [moduleId] : []
       };
@@ -480,7 +455,7 @@ class VocabDB {
   }
 
   async logStudyActivity(cardsReviewed = 1, cardsMastered = 0, quizCount = 0, durationMinutes = 2) {
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = this.getLocalDateString();
     const existing = await this.get('study_logs', 'log-' + todayStr);
     
     if (existing) {
