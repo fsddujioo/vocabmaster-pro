@@ -1,3 +1,7 @@
+# Cập nhật 5.9 — chọn bài & kho Study4
+
+Learning Engine chọn trong 74 buổi/subskill theo checkpoint, lỗi và lịch học. Hồ sơ bắt đầu Study4 từ đầu; giữ baseline tự báo. Kho đã đọc đủ 5 khóa, 6.428 hoạt động; thời lượng chưa có metadata được ghi rõ. Xem [hướng dẫn và giới hạn thực tế](STUDY4_LEARNING_ENGINE.md). Tiện ích 1.3 giữ nguyên quyền truy cập; cần tải lại một lần.
+
 # VocabMaster Pro
 
 Flashcard/SRS, luyện IELTS và tiện ích Study4. App chạy trên máy, nguồn học IELTS chính là các khóa Study4 người học có quyền truy cập.

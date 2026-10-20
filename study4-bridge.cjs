@@ -1,6 +1,7 @@
 'use strict';
 const fs=require('node:fs/promises'),path=require('node:path'),crypto=require('node:crypto');
 const core=require('./js/study4-core.js');
+const catalogCore=require('./js/study4-catalog-core.js');
 module.exports=function createBridge(root,port){
   const directory=path.join(root,'.study4-private'),file=path.join(directory,'bridge.json');
   let serial=Promise.resolve();
@@ -35,11 +36,20 @@ module.exports=function createBridge(root,port){
       }
       if(url.pathname==='/api/study4/status'&&req.method==='GET'){
         if(!isAppRead&&!authenticatedExtension){reply(res,403,{error:'Chưa kết nối VocabMaster.'},cors);return true;}
-        reply(res,200,{app:'VocabMaster Pro',version:'5.3',pending:state.captures.length,connected:!!state.extensionId},cors);return true;
+        reply(res,200,{app:'VocabMaster Pro',version:'5.9',pending:state.captures.length,connected:!!state.extensionId},cors);return true;
       }
       if(url.pathname==='/api/study4/captures'&&req.method==='GET'){
         if(!isAppRead){reply(res,403,{error:'Chỉ xem bản nháp trong app.'},cors);return true;}
         reply(res,200,{captures:state.captures});return true;
+      }
+      if(url.pathname==='/api/study4/catalog'&&req.method==='GET'){
+        if(!isAppRead){reply(res,403,{error:'Chỉ đọc danh mục trong app.'},cors);return true;}
+        reply(res,200,state.catalog||{version:1,items:[],observations:[],sync:null});return true;
+      }
+      if(url.pathname==='/api/study4/catalog'&&req.method==='POST'){
+        if(!authenticatedExtension){reply(res,403,{error:'Cần tiện ích đã ghép nối.'},cors);return true;}
+        const input=await body(req);if(!Array.isArray(input.items)||input.items.length>200||!Array.isArray(input.observations)||input.observations.length>100)throw Error('Gói danh mục quá lớn.');
+        const result=await transaction(s=>{s.catalog=catalogCore.merge(s.catalog,input);return {items:s.catalog.items.length,observations:s.catalog.observations.length,sync:s.catalog.sync};});reply(res,200,result,cors);return true;
       }
       if(url.pathname==='/api/study4/captures'&&req.method==='POST'){
         if(!app&&!authenticatedExtension){reply(res,403,{error:'Tiện ích chưa kết nối. Mở app → Study4 → Kết nối tiện ích.'},cors);return true;}

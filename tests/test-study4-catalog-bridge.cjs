@@ -1,0 +1,17 @@
+'use strict';
+const assert=require('node:assert/strict'),http=require('node:http'),fs=require('node:fs/promises'),os=require('node:os'),path=require('node:path');
+(async()=>{let checks=0;const eq=(a,b)=>{checks++;assert.deepEqual(a,b);},ok=v=>{checks++;assert.ok(v);};const root=await fs.mkdtemp(path.join(os.tmpdir(),'vm-catalog-test-'));const bridge=require('../study4-bridge.cjs')(root,8098);const server=http.createServer((q,s)=>{bridge(q,s,new URL(q.url,'http://localhost:8098')).catch(e=>{s.writeHead(500);s.end(e.message);});});await new Promise(r=>server.listen(0,'127.0.0.1',r));const host='http://127.0.0.1:'+server.address().port,origin='http://localhost:8098',post=(route,data,headers={})=>fetch(host+'/api/study4/'+route,{method:'POST',headers:{'Content-Type':'application/json',...headers},body:JSON.stringify(data)});try{
+  let r=await post('catalog',{items:[],observations:[]},{Origin:origin});eq(r.status,403);
+  r=await post('connect',{extensionId:'a'.repeat(32)},{Origin:origin});eq(r.status,200);const {token}=await r.json();ok(/^[a-f0-9]{64}$/.test(token));const auth={Origin:'chrome-extension://'+'a'.repeat(32),Authorization:'Bearer '+token};
+  const item={url:'https://study4.com/courses/15/ielts-intensive-listening/learn/activities/19548/',title:'Lý thuyết',durationSeconds:null};r=await post('catalog',{items:[item],observations:[]},auth);eq(r.status,200);eq((await r.json()).items,1);
+  r=await post('catalog',{items:[{...item,durationSeconds:400}],observations:[{url:'https://study4.com/tests/1/test/results/2/',score:8,total:10}],sync:{pages:1,complete:false,errors:['Lỗi mạng ở trang2']}},auth);eq(r.status,200);
+  r=await fetch(host+'/api/study4/catalog',{headers:{Origin:origin}});eq(r.status,200);const data=await r.json();eq(data.items[0].durationSeconds,400);eq(data.observations[0].countsAsMastery,false);eq(data.sync.complete,false);eq(data.sync.errors.length,1);
+  r=await fetch(host+'/api/study4/catalog',{headers:{Origin:'https://study4.com'}});eq(r.status,403);
+  r=await post('catalog',{items:[{...item,url:'https://evil.test/x'}],observations:[]},auth);eq(r.status,400);
+  r=await post('catalog',{items:Array(201).fill(item),observations:[]},auth);eq(r.status,400);
+  r=await post('catalog',{items:[{...item,durationSeconds:null}],observations:[],sync:{pages:105,complete:true}},auth);eq(r.status,200);
+  r=await fetch(host+'/api/study4/catalog',{headers:{Origin:origin}});const retained=await r.json();eq(retained.items[0].durationSeconds,400);eq(retained.items.length,1);eq(retained.sync.complete,true);
+  r=await post('catalog',{items:[],observations:[]},{...auth,Origin:'https://evil.test'});eq(r.status,403);
+  const disk=JSON.parse(await fs.readFile(path.join(root,'.study4-private/bridge.json'),'utf8'));eq(disk.captures,[]);eq(disk.catalog.items.length,1);
+  console.log(JSON.stringify({passed:true,assertions:checks,coverage:['paired extension authentication','same origin app reads','metadata updates and durable deduplication','unknown duration preservation','observation isolation','batch limits and partial sync','no captured answers required']}));
+}finally{await new Promise(r=>server.close(r));const resolved=path.resolve(root);if(resolved.startsWith(path.resolve(os.tmpdir())+path.sep)&&path.basename(resolved).startsWith('vm-catalog-test-'))await fs.rm(resolved,{recursive:true,force:true});}})().catch(e=>{console.error(e);process.exitCode=1;});

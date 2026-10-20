@@ -99,7 +99,7 @@ const server=http.createServer(async(req,res)=>{
     if(url.pathname.startsWith('/api/')) {
       if(req.headers.origin&&!origins.has(req.headers.origin))return json(res,403,{error:'Origin not allowed.'});
       if(req.headers['sec-fetch-site']==='cross-site')return json(res,403,{error:'Cross-site access is not allowed.'});
-      if(req.method==='GET'&&url.pathname==='/api/health')return json(res,200,{app:'VocabMaster Pro',version:'5.3',ai:'ollama-local'});
+      if(req.method==='GET'&&url.pathname==='/api/health')return json(res,200,{app:'VocabMaster Pro',version:'5.9',ai:'ollama-local'});
       if(req.method==='GET'&&url.pathname==='/api/ai/models'){
         const r=await fetch('http://127.0.0.1:11434/api/tags',{signal:AbortSignal.timeout(5000)});if(!r.ok)throw new Error('Ollama chưa sẵn sàng.');
         const tags=await r.json();return json(res,200,{models:(tags.models||[]).filter(m=>!/cloud/i.test(m.name)&&!m.remote_host).map(m=>({name:m.name,size:m.size}))});
@@ -125,5 +125,5 @@ const server=http.createServer(async(req,res)=>{
   } catch(error) { json(res,error.code==='ENOENT'?404:500,{error:error.code==='ENOENT'?'Not found.':error.message||'Yêu cầu không thành công.'}); }
 });
 server.requestTimeout=200000;
-server.listen(PORT,'127.0.0.1',()=>console.log(`VocabMaster Pro 5.3: http://localhost:${PORT} — Ollama bridge enabled`));
+server.listen(PORT,'127.0.0.1',()=>console.log(`VocabMaster Pro 5.9: http://localhost:${PORT} — Ollama bridge enabled`));
 server.on('error',error=>{console.error(error.message);process.exitCode=1;});

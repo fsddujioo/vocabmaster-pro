@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "VocabMaster Study4",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "Lưu từ, ngữ cảnh và lỗi thật từ Study4 vào VocabMaster trên máy.",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAlSfI2rr9kChfH0V2WhjoSaXl7VpOwN/C8RCHPAm67g80gGayAdvVt2Veg4c5sBBKh8Kpwxubz/RmScIExZqTFN29WtmJ9R7yfEO+9l9msq6LuwRXNAsya4oxvYTqg3iGS5CmuoiQBLkV/0XxSKAwhPQDspMY+bKnKb4eshwfmddiKIjN9o1XHotoVZYXXU6Hmtlwvvg2WfdfLQZMk25air3j6PWJT6xcmpVW+Gmxya7QZ1lJ4Ac+cvUkxmNwBg+9OyAHbhccATRW2FgijOM6UjgUlXMCiPCvYfoZGpKu4c4ffqM4h1QbVRCMmb0snZBUgMtK9ryEXLthNx3u2B+QjwIDAQAB",
   "permissions": [
@@ -35,7 +35,9 @@
       "js": [
         "study4-core.js",
         "study4-reader.js",
-        "content.js"
+        "content.js",
+        "study4-catalog-core.js",
+        "catalog-reader.js"
       ],
       "css": [
         "content.css"

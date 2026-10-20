@@ -2,7 +2,7 @@
   "version": 1,
   "checkedAt": "2026-10-20",
   "title": "Học từng bước với Study4",
-  "note": "Chặng đầu có 8 buổi chi tiết, dùng bốn khóa Study4 của m. Mỗi lần chỉ làm bước đang mở, 90–120 phút gồm chữa/checkpoint và ôn thẻ. Đây là điểm bắt đầu của kế hoạch 5 buổi/tuần hướng tới hè 2027; tiến độ đi theo bằng chứng. Hướng dẫn/ngưỡng luyện do trợ lý thiết kế, không phải giáo trình Study4 chính thức. Chưa đồng bộ tự động toàn bộ lịch sử học trên Study4.",
+  "note": "Chặng đầu có 8 buổi chi tiết, dùng bốn khóa Study4 của m. Mỗi lần chỉ làm bước đang mở, 90–120 phút gồm chữa/checkpoint và ôn thẻ. Đây là điểm bắt đầu của kế hoạch 5 buổi/tuần hướng tới hè 2027; tiến độ đi theo bằng chứng. Hướng dẫn/ngưỡng luyện do trợ lý thiết kế, không phải giáo trình Study4 chính thức. Bắt đầu từ đầu theo xác nhận của m; danh mục và kết quả mới được thu qua tiện ích, không coi nhãn hoàn thành là mastery.",
   "lessons": [
     {
       "id": "g01",
